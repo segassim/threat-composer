@@ -23,6 +23,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import frontmatter from 'remark-frontmatter';
 import gfm from 'remark-gfm';
+import MermaidDiagram from '../MermaidDiagram';
 
 const externalPattern = /^((https?):\/\/)/;
 
@@ -102,6 +103,13 @@ const components = {
     }
 
     return <>{props.children}</>;
+  },
+  code: (props: any) => {
+    const match = /language-(\w+)/.exec(props.className || '');
+    if (match && match[1] === 'mermaid') {
+      return <MermaidDiagram chart={String(props.children)} />;
+    }
+    return <code {...props} />;
   },
 };
 

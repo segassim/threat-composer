@@ -15,14 +15,43 @@
  ******************************************************************************************************************** */
 import sanitizeHtmlString from 'sanitize-html';
 
+/**
+ * Sanitizes a string while preserving mermaid code blocks.
+ * Mermaid diagrams use < and > for arrows which should not be encoded.
+ */
+const sanitizeString = (str: string): string => {
+  // Match mermaid code blocks: ```mermaid ... ```
+  const mermaidBlockRegex = /```mermaid[\s\S]*?```/g;
+  const mermaidBlocks: string[] = [];
+  let blockIndex = 0;
+
+  // Extract mermaid blocks and replace with placeholders
+  const withPlaceholders = str.replace(mermaidBlockRegex, (match) => {
+    const placeholder = `__MERMAID_BLOCK_${blockIndex}__`;
+    mermaidBlocks.push(match);
+    blockIndex++;
+    return placeholder;
+  });
+
+  // Sanitize the string (this will encode < and > in non-mermaid content)
+  let sanitized = sanitizeHtmlString(withPlaceholders, {
+    allowedTags: [],
+  });
+
+  // Restore mermaid blocks (unencoded)
+  mermaidBlocks.forEach((block, index) => {
+    sanitized = sanitized.replace(`__MERMAID_BLOCK_${index}__`, block);
+  });
+
+  return sanitized;
+};
+
 const sanitizeHtml: any = (data: any) => {
   if (data) {
     if (Array.isArray(data)) {
       return data.map(d => sanitizeHtml(d));
     } else if (typeof data === 'string') {
-      return sanitizeHtmlString(data, {
-        allowedTags: [],
-      });
+      return sanitizeString(data);
     } else if (typeof data === 'object') {
       return Object.keys(data).reduce(
         (attrs, key) => ({

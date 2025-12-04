@@ -23,6 +23,7 @@ import { FC, useState, useRef } from 'react';
 import { useContentValidation } from '../../../hooks';
 import { TextAreaProps } from '../Textarea';
 import { useThemeContext } from '../ThemeProvider';
+import MermaidDiagram from '../MermaidDiagram';
 
 import '@mdxeditor/editor/style.css';
 
@@ -96,6 +97,19 @@ const MarkdownEditor: FC<MarkdownEditorProps> = ({
           emphasis: '_',
           bullet: '-',
           rule: '_',
+          handlers: {
+            // Custom handler for code blocks - prevents encoding in mermaid diagrams
+            code: (node: any, _parent: any, state: any, info: any) => {
+              if (node.lang === 'mermaid') {
+                // For mermaid blocks, output content as-is without any encoding
+                const marker = '`'.repeat(3);
+                const value = node.value || '';
+                return `${marker}mermaid\n${value}\n${marker}`;
+              }
+              // For all other code blocks, use default handler
+              return state.defaultHandlers.code(node, _parent, state, info);
+            },
+          },
         }}
         plugins={[
           toolbarPlugin({
@@ -113,10 +127,41 @@ const MarkdownEditor: FC<MarkdownEditorProps> = ({
               </DiffSourceToggleWrapper>
             ),
           }),
-          codeBlockPlugin({ defaultCodeBlockLanguage: '' }),
+          codeBlockPlugin({
+            defaultCodeBlockLanguage: 'text',
+            codeBlockEditorDescriptors: [
+              {
+                match: (language) => language === 'mermaid',
+                priority: 1,
+                Editor: (props) => {
+                  return (
+                    <div style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '1rem', margin: '0.5rem 0' }}>
+                      <MermaidDiagram chart={props.code} />
+                    </div>
+                  );
+                },
+              },
+            ],
+          }),
           codeMirrorPlugin({
             codeBlockLanguages: {
-              '': 'text',
+              'text': 'text',
+              'javascript': 'javascript',
+              'typescript': 'typescript',
+              'json': 'json',
+              'yaml': 'yaml',
+              'bash': 'bash',
+              'shell': 'shell',
+              'python': 'python',
+              'java': 'java',
+              'go': 'go',
+              'rust': 'rust',
+              'sql': 'sql',
+              'html': 'html',
+              'css': 'css',
+              'xml': 'xml',
+              'markdown': 'markdown',
+              'mermaid': 'text',
             },
           }),
           tablePlugin(),

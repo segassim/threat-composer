@@ -19,6 +19,24 @@ import { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
 import sanitizeHtml from '../../utils/sanitizeHtml';
 
+/**
+ * Decodes HTML entities (&lt; and &gt;) back to < and > inside mermaid code blocks.
+ * This fixes the issue where MDXEditor encodes angle brackets when converting content to markdown.
+ */
+const decodeMermaidCodeBlocks = (input: string): string => {
+  // Match mermaid code blocks: ```mermaid ... ```
+  const mermaidBlockRegex = /```mermaid([\s\S]*?)```/g;
+  
+  return input.replace(mermaidBlockRegex, (_match, content) => {
+    // Decode HTML entities inside the mermaid block content (fallback safety)
+    const decodedContent = content
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    return `\`\`\`mermaid${decodedContent}\`\`\``;
+  });
+};
+
 const useContentValidation = <T extends NonCancelableEventHandler<BaseChangeDetail> | ((newValue: string) => void)>(
   value: string,
   onChange?: T,
@@ -48,6 +66,9 @@ const useContentValidation = <T extends NonCancelableEventHandler<BaseChangeDeta
     //Work around for https://github.com/mdx-editor/editor/issues/574
     // and https://github.com/mdx-editor/editor/issues/103 and
     newValue = newValue.split('\n').map(line => line.endsWith('&#x20;') ? line.slice(0, -6) : line).join('\n');
+
+    // Decode HTML entities in mermaid code blocks (fixes MDXEditor encoding angle brackets)
+    newValue = decodeMermaidCodeBlocks(newValue);
 
     setTempValue(newValue);
     const cleanValue = sanitizeHtml(newValue);
